@@ -1,21 +1,21 @@
-# FastAPI LangGraph with Thread Persistence
+# FastAPI LangGraph Template
 
-Enterprise-grade FastAPI application with LangGraph integration for streaming conversational AI agents featuring thread-based persistence and conversation management.
+A production-ready template for building enterprise-grade FastAPI applications with LangGraph integration, featuring streaming conversational AI agents with thread-based persistence and conversation management.
 
-## 🎯 Key Features
+## 🎯 What This Template Provides
 
-- **Thread-Based Conversations**: Persistent conversation threads with unique identifiers
+- **Thread-Based Conversations**: Ready-to-use persistent conversation threads with unique identifiers
 - **Token-Level Streaming**: Real-time response streaming with WebSocket-like experience
-- **Enterprise-Grade Error Handling**: Comprehensive error handling and logging
-- **Thread Management**: Complete thread lifecycle management (create, retrieve, clear)
-- **RESTful API**: Well-designed API following enterprise patterns
-- **Type Safety**: Full TypeScript-style type annotations with Pydantic
+- **Enterprise-Grade Error Handling**: Comprehensive error handling and logging infrastructure
+- **Thread Management**: Complete thread lifecycle management (create, retrieve, clear, archive)
+- **RESTful API**: Well-designed API structure following enterprise patterns
+- **Type Safety**: Full TypeScript-style type annotations with Pydantic models
 
-## 🏗️ Architecture Overview
+## 🏗️ Template Architecture
 
 ### Persistence Strategy
 
-The application implements thread-based persistence using LangGraph's MemorySaver:
+This template implements thread-based persistence using LangGraph's MemorySaver pattern:
 
 - **Thread Checkpoints**: Each conversation thread maintains its state
 - **Conversation Continuity**: Threads can be resumed exactly where they left off
@@ -31,24 +31,42 @@ graph TD
     F --> G[Stream Response]
 ```
 
-## 🚀 Quick Start
+## 🚀 Getting Started with This Template
 
-### 1. Environment Setup
+### 1. Use This Template
 
 ```bash
-# Clone the repository
-git clone https://github.com/posgnu/fastapi-langraph.git
-cd fastapi-langraph
+# Create a new repository from this template
+# Click "Use this template" on GitHub, or clone directly:
+git clone https://github.com/posgnu/fastapi-langraph.git your-project-name
+cd your-project-name
 
+# Rename the project
+# Update pyproject.toml, README.md, and other references as needed
+```
+
+### 2. Environment Setup
+
+```bash
 # Create environment file
 cp .env.example .env
-# Add your OPENAI_API_KEY to .env
+# Add your OPENAI_API_KEY and customize other settings
 
 # Install dependencies
 poetry install
 ```
 
-### 2. Start the Server
+### 3. Customize Your Agent
+
+Edit `fastapi_langraph/agent/` to implement your specific agent logic:
+
+```python
+# Example: Customize the agent behavior
+# In fastapi_langraph/agent/tools/
+# Add your custom tools and capabilities
+```
+
+### 4. Start Development Server
 
 ```bash
 poetry run uvicorn fastapi_langraph.main:app --reload
@@ -58,256 +76,181 @@ The server will start at `http://localhost:8000` with:
 - API Documentation: `http://localhost:8000/docs`
 - Service Info: `http://localhost:8000/info`
 
-### 3. Interactive Chat Client
+### 5. Test Your Implementation
 
 ```bash
-# Start the chat client
+# Use the included chat client to test your agent
 poetry run python scripts/chat.py
 ```
 
-The chat client provides:
-- Thread management commands
-- Conversation history viewing
-- Interactive chat interface
+## 📚 Template API Structure
 
-## 📚 API Endpoints
+This template provides a complete API structure that you can build upon:
 
 ### Core Chat Endpoints
 
 #### `POST /chat/stream` - Stream Chat with Persistence
 Stream conversational responses with thread persistence.
 
-**Request:**
+**Request Format:**
 ```json
 {
-  "input": "Hello, how are you today?",
+  "input": "Your user message here",
   "thread_id": "optional-thread-id",
   "session_metadata": {
-    "client": "web_app",
+    "client": "your_app",
     "timestamp": "2024-01-01T00:00:00Z"
   }
 }
 ```
 
-**Response Stream:**
+**Response Stream Format:**
 ```json
 {"type": "metadata", "thread_id": "abc-123", "metadata": {"thread_created": true}}
-{"type": "token", "content": "Hello", "thread_id": "abc-123"}
-{"type": "token", "content": "!", "thread_id": "abc-123"}
+{"type": "token", "content": "Response", "thread_id": "abc-123"}
 {"type": "metadata", "thread_id": "abc-123", "metadata": {"status": "completed"}}
 ```
 
 ### Thread Management Endpoints
 
-#### `GET /threads/{thread_id}/history` - Thread History
-Retrieve conversation history for a specific thread.
+- `GET /threads/{thread_id}/history` - Retrieve conversation history
+- `DELETE /threads/{thread_id}` - Delete thread and history
+- `PUT /threads/{thread_id}/clear` - Clear thread messages
+- `PUT /threads/{thread_id}/archive` - Archive thread (customize as needed)
 
-**Response:**
-```json
-{
-  "thread_id": "abc-123",
-  "history": [
-    {
-      "timestamp": "2024-01-01T00:00:00Z",
-      "messages": [
-        {"type": "human", "content": "Hello"},
-        {"type": "ai", "content": "Hi there!"}
-      ]
-    }
-  ],
-  "total_messages": 1
-}
-```
+### Service Information
 
-#### `DELETE /threads/{thread_id}` - Delete Thread
-Delete a specific thread and all its conversation history.
+- `GET /info` - Service information and capabilities
 
-**Response:** 204 No Content on success
+## 🛠️ Customization Guide
 
-#### `PUT /threads/{thread_id}/clear` - Clear Thread
-Clear all messages from a thread while keeping it active.
+### 1. Agent Customization
 
-**Response:**
-```json
-{
-  "thread_id": "abc-123",
-  "history": [],
-  "total_messages": 0
-}
-```
-
-#### `PUT /threads/{thread_id}/archive` - Archive Thread
-Archive a specific thread (placeholder for future implementation).
-
-**Response:**
-```json
-{
-  "thread_id": "abc-123",
-  "history": [...],
-  "total_messages": 5
-}
-```
-
-### Service Endpoints
-
-#### `GET /info` - Service Information
-Get comprehensive service information and capabilities.
-
-**Response:**
-```json
-{
-  "service": {
-    "name": "fastapi-langraph",
-    "description": "AI Agent with Thread Persistence",
-    "version": "1.0.0"
-  },
-  "features": {
-    "streaming": true,
-    "persistence": true,
-    "thread_management": true
-  },
-          "endpoints": {
-            "stream": "/chat/stream",
-            "thread_history": "/threads/{thread_id}/history",
-            "delete_thread": "/threads/{thread_id}",
-            "clear_thread": "/threads/{thread_id}/clear",
-            "archive_thread": "/threads/{thread_id}/archive"
-        }
-}
-```
-
-## 🛠️ Advanced Usage
-
-### Thread Management Best Practices
-
-1. **Thread Naming Convention**
-   ```python
-   # Use descriptive thread IDs for better organization
-   thread_id = f"session-{session_id}-{timestamp}"
-   ```
-
-2. **Context Window Management**
-   ```python
-   # The agent automatically manages context window size
-   # Long conversations are automatically truncated
-   ```
-
-3. **Error Recovery**
-   ```python
-   # Implement retry logic for failed requests
-   for attempt in range(3):
-       try:
-           response = await client.post("/stream", json=data)
-           break
-       except Exception as e:
-           if attempt == 2:
-               raise
-           await asyncio.sleep(2 ** attempt)
-   ```
-
-### Production Deployment Considerations
-
-#### 1. Persistence Backends
-
-For production environments, replace in-memory stores:
+Replace the default agent implementation in `fastapi_langraph/agent/`:
 
 ```python
-# SQLite for small-scale production
-from langgraph.checkpoint.sqlite import SqliteSaver
-checkpointer = SqliteSaver("./checkpoints.db")
+# Example: Custom agent with your tools
+from your_tools import CustomTool1, CustomTool2
 
-# PostgreSQL for enterprise scale
+def create_your_agent():
+    # Implement your agent logic here
+    return agent
+```
+
+### 2. Add Custom Tools
+
+Extend the tools directory:
+
+```bash
+# Add your tools in fastapi_langraph/agent/tools/
+touch fastapi_langraph/agent/tools/your_custom_tool.py
+```
+
+### 3. Database Integration
+
+Replace the in-memory storage with your preferred database:
+
+```python
+# For SQLite
+from langgraph.checkpoint.sqlite import SqliteSaver
+checkpointer = SqliteSaver("./your_app.db")
+
+# For PostgreSQL
 from langgraph.checkpoint.postgres import PostgresSaver
 checkpointer = PostgresSaver(connection_string="postgresql://...")
 ```
 
-#### 2. Monitoring and Observability
+### 4. Middleware Customization
+
+Add your middleware in `fastapi_langraph/middleware/`:
 
 ```python
-# Add comprehensive logging
-import structlog
-logger = structlog.get_logger()
-
-# Add metrics collection
-from prometheus_client import Counter, Histogram
-request_counter = Counter('requests_total', 'Total requests')
-response_time = Histogram('response_time_seconds', 'Response time')
+# Example: Authentication, rate limiting, etc.
+@app.middleware("http")
+async def your_custom_middleware(request: Request, call_next):
+    # Your middleware logic
+    pass
 ```
 
-#### 3. Security Considerations
+### 5. API Customization
+
+Extend or modify the API routers in `fastapi_langraph/api/routers/`:
 
 ```python
-# Add authentication middleware
-from fastapi.security import HTTPBearer
-security = HTTPBearer()
-
-# Rate limiting
-from slowapi import Limiter
-limiter = Limiter(key_func=get_remote_address)
-
-# Input validation
-from pydantic import validator
-class SecureRequest(BaseModel):
-    @validator('input')
-    def validate_input_length(cls, v):
-        if len(v) > 10000:
-            raise ValueError('Input too long')
-        return v
+# Add your custom endpoints
+@router.post("/your-custom-endpoint")
+async def your_endpoint():
+    # Your endpoint logic
+    pass
 ```
 
-## 🧪 Testing
+## 🚀 Production Deployment
+
+### 1. Update Configuration
+
+```python
+# Update fastapi_langraph/core/config.py
+class Settings(BaseSettings):
+    project_name: str = "Your Project Name"
+    description: str = "Your project description"
+    # Add your custom settings
+```
+
+### 2. Choose Your Persistence Backend
+
+```python
+# Production-ready persistence options
+# SQLite for small-scale
+# PostgreSQL for enterprise scale
+# Redis for caching
+```
+
+### 3. Add Monitoring
+
+```python
+# Add your monitoring solution
+# Prometheus, DataDog, New Relic, etc.
+```
+
+## 🧪 Testing Your Implementation
 
 ### Unit Tests
 ```bash
+# Add your tests in tests/
 poetry run pytest tests/
 ```
 
-### Integration Tests
+### Integration Testing
 ```bash
-# Test the API endpoints
+# Test your customized endpoints
 curl -X POST "http://localhost:8000/chat/stream" \
      -H "Content-Type: application/json" \
-     -d '{"input": "Hello", "thread_id": "test-thread"}' \
+     -d '{"input": "Test your agent", "thread_id": "test-thread"}' \
      --no-buffer
 ```
 
-### Load Testing
+### Chat Client Testing
 ```bash
-# Use the chat client for interactive testing
+# Use the included interactive client
 poetry run python scripts/chat.py
-
-# Example conversation flow:
-# 1. Start new thread
-# 2. Send: "Hello, remember this conversation"
-# 3. Check history: /history
-# 4. Clear thread: /clear
 ```
 
-## 🏢 Enterprise Best Practices
+## 📁 Template Structure
 
-### 1. Thread Management Strategy
-
-- **Thread Lifecycle**: Implement proper thread creation, usage, and cleanup
-- **Context Management**: Automatic context window management prevents token overflow
-- **State Persistence**: Reliable conversation state management
-
-### 2. Scalability Patterns
-
-- **Horizontal Scaling**: Use stateless design with external persistence
-- **Load Balancing**: Implement session affinity for thread consistency
-- **Caching**: Add Redis for frequently accessed thread states
-
-### 3. Monitoring and Alerting
-
-- **Performance Metrics**: Track response times, thread usage, error rates
-- **Business Metrics**: Monitor conversation quality, completion rates
-- **Alerting**: Set up alerts for system health and performance degradation
-
-### 4. Data Privacy and Compliance
-
-- **Data Encryption**: Encrypt sensitive conversation data
-- **Data Retention**: Implement automatic data purging policies
-- **Audit Logging**: Maintain comprehensive audit trails
+```
+your-project/
+├── fastapi_langraph/          # Main application package
+│   ├── agent/                 # Agent implementation (customize this)
+│   │   └── tools/            # Agent tools (add your tools here)
+│   ├── api/                   # API layer
+│   │   └── routers/          # API routers (extend as needed)
+│   ├── core/                  # Core configuration and utilities
+│   └── middleware/            # Custom middleware
+├── scripts/                   # Utility scripts
+├── tests/                     # Test suite (add your tests)
+├── pyproject.toml            # Dependencies (update for your project)
+└── README.md                 # This file (customize for your project)
+```
 
 ## 🔧 Configuration
 
@@ -317,28 +260,39 @@ poetry run python scripts/chat.py
 # Required
 OPENAI_API_KEY=your-openai-api-key
 
-# Optional
-PROJECT_NAME=FastAPI-LangGraph
-DESCRIPTION=AI Agent with Thread Persistence
+# Customize these for your project
+PROJECT_NAME=Your-Project-Name
+DESCRIPTION=Your project description
 LOG_LEVEL=INFO
 MAX_CONVERSATION_LENGTH=20
 ```
 
-### Advanced Configuration
+### Agent Configuration
 
 ```python
-# Custom agent configuration
+# Customize in fastapi_langraph/core/config.py
 AGENT_CONFIG = {
-    "model": "gpt-3.5-turbo",
-    "temperature": 0.1,
+    "model": "gpt-4o-mini",  # Choose your model
+    "temperature": 0.1,       # Adjust for your use case
     "max_context_messages": 20,
     "streaming": True
 }
 ```
 
-## 🤝 Contributing
+## 🎯 Next Steps
 
-1. Fork the repository
+1. **Clone/Fork** this template
+2. **Customize** the agent logic for your use case
+3. **Add** your specific tools and capabilities
+4. **Configure** your persistence backend
+5. **Deploy** to your preferred platform
+6. **Monitor** and iterate
+
+## 🤝 Contributing to the Template
+
+Improvements to this template are welcome:
+
+1. Fork the template repository
 2. Create a feature branch
 3. Add comprehensive tests
 4. Follow the existing code style
@@ -350,10 +304,11 @@ MIT License - see LICENSE file for details.
 
 ## 🆘 Support
 
-- **Documentation**: Check `/docs` endpoint when server is running
-- **Issues**: Submit GitHub issues for bugs and feature requests
-- **Discussions**: Use GitHub Discussions for questions and community support
+- **Issues**: Submit GitHub issues for template bugs and improvements
+- **Discussions**: Use GitHub Discussions for questions about using this template
 
 ---
+
+**⭐ Star this template if it helps you build amazing AI applications!**
 
 **Built with ❤️ using FastAPI, LangGraph, and OpenAI**

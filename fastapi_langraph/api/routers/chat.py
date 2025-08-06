@@ -1,7 +1,7 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator, Dict, List, Union
 
 from fastapi import APIRouter, Body
 from fastapi.responses import StreamingResponse
@@ -14,6 +14,101 @@ logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+def serialize_message_object(
+    obj: Any,
+) -> Union[Dict[str, Any], str, int, float, List[Any]]:
+    """
+    Safely serialize LangChain message objects to dictionaries.
+
+    Args:
+        obj: LangChain message object (ToolMessage, AIMessageChunk, etc.)
+
+    Returns:
+        Serializable dictionary representation or primitive type
+    """
+    if hasattr(obj, "content") and hasattr(obj, "type"):
+        # Handle LangChain Message objects
+        result = {
+            "type": obj.type,
+            "content": obj.content,
+        }
+
+        # Add specific fields based on message type
+        if hasattr(obj, "tool_call_id"):  # ToolMessage
+            result["tool_call_id"] = obj.tool_call_id
+        if hasattr(obj, "name"):  # ToolMessage or others with name
+            result["name"] = getattr(obj, "name", None)
+        if hasattr(obj, "id"):  # Message ID
+            result["id"] = getattr(obj, "id", None)
+        if hasattr(obj, "tool_calls"):  # AIMessage with tool calls
+            result["tool_calls"] = getattr(obj, "tool_calls", [])
+
+        return result
+
+    # For non-message objects, try basic serialization
+    try:
+        if isinstance(obj, (str, int, float, bool, list, dict)):
+            return obj
+        elif hasattr(obj, "__dict__"):
+            return {
+                k: v
+                for k, v in obj.__dict__.items()
+                if isinstance(v, (str, int, float, bool, list, dict))
+            }
+        else:
+            return str(obj)
+    except Exception:
+        return str(obj)
+
+
+def safe_serialize_event_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Recursively serialize event data, handling LangChain objects.
+
+    Args:
+        data: Event data dictionary
+
+    Returns:
+        Serializable dictionary
+    """
+    if not isinstance(data, dict):
+        serialized = serialize_message_object(data)
+        # Ensure we return a dict for this function
+        if isinstance(serialized, dict):
+            return serialized
+        else:
+            return {"value": serialized}
+
+    result = {}
+    for key, value in data.items():
+        if hasattr(value, "__class__") and "Message" in value.__class__.__name__:
+            # This is a LangChain message object
+            result[key] = serialize_message_object(value)
+        elif isinstance(value, dict):
+            result[key] = safe_serialize_event_data(value)
+        elif isinstance(value, list):
+            result[key] = [
+                (
+                    safe_serialize_event_data(item)
+                    if isinstance(item, dict)
+                    else serialize_message_object(item)
+                )
+                for item in value
+            ]
+        else:
+            try:
+                # Try to include the value if it's JSON serializable
+                import json
+
+                json.dumps(value)
+                result[key] = value
+            except (TypeError, ValueError):
+                # If not serializable, convert to string
+                result[key] = str(value)
+
+    return result
 
 
 @router.post("/stream")  # type: ignore[misc]
@@ -77,12 +172,15 @@ async def stream_chat(request: StreamRequest = Body(...)) -> StreamingResponse:
                         yield f"{response.model_dump_json()}\n"
 
                 elif chunk.get("event") in ["on_tool_start", "on_tool_end"]:
+                    # Safely serialize tool event data
+                    safe_metadata = safe_serialize_event_data(chunk.get("data", {}))
+
                     response = StreamResponse(
                         type="tool_event",
                         content=None,
                         thread_id=thread_id,
                         user_id=None,
-                        metadata=chunk.get("data", {}),
+                        metadata=safe_metadata,
                     )
                     yield f"{response.model_dump_json()}\n"
 
