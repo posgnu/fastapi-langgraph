@@ -13,4 +13,4 @@ RUN poetry config virtualenvs.create false && poetry install --no-dev --no-inter
 
 COPY ./src/fastapi_langraph /app/src/fastapi_langraph
 
-CMD ["uvicorn", "src.fastapi_langraph.main:app", "--host", "0.0.0.0", "--port", "80"] 
+CMD ["uvicorn", "src.fastapi_langraph.main:app", "--host", "0.0.0.0", "--port", "80"]

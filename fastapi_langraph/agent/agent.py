@@ -1,35 +1,28 @@
-from typing import TypedDict, Annotated, Sequence
 import operator
+from typing import Annotated, Any, AsyncGenerator, Dict, Sequence, TypedDict
+
 from langchain_core.messages import BaseMessage
-from langgraph.graph import StateGraph, END
+from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
-from fastapi_langraph.agent.tools.web_search import web_search_tool
+
+from fastapi_langraph.agent.tools.mock_search import mock_search
+
 
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], operator.add]
 
+
 class ReActAgent:
-    def __init__(self):
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
-        self.tools = [web_search_tool]
+    def __init__(self) -> None:
+        llm = ChatOpenAI(model="gpt-4o", temperature=0, streaming=True)
+        self.tools = [mock_search]
+        self.llm = llm.bind_tools(self.tools)
         self.tool_node = ToolNode(self.tools)
-        self.prompt = self._create_prompt()
-        self.graph = self._create_graph()
+        self.graph: Runnable = self._create_graph()
 
-    def _create_prompt(self):
-        return ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    "You are a helpful assistant. Please respond to the user's request only based on the given context.",
-                ),
-                ("user", "{input}"),
-            ]
-        )
-
-    def _create_graph(self):
+    def _create_graph(self) -> Runnable:
         workflow = StateGraph(AgentState)
         workflow.add_node("agent", self._agent_node)
         workflow.add_node("tools", self.tool_node)
@@ -45,15 +38,27 @@ class ReActAgent:
         workflow.add_edge("tools", "agent")
         return workflow.compile()
 
-    def _agent_node(self, state):
-        return {"messages": [self.llm.invoke(state["messages"])]}
+    def _agent_node(self, state: AgentState) -> Dict[str, Any]:
+        result = self.llm.invoke(state["messages"])
+        return {"messages": [result]}
 
-    def _should_continue(self, state):
-        if "tool_calls" in state["messages"][-1].additional_kwargs:
+    def _should_continue(self, state: AgentState) -> str:
+        last_message = state["messages"][-1]
+        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
             return "continue"
         return "end"
 
-    def stream(self, query: str):
-        return self.graph.stream({"messages": [("user", query)]})
+    async def stream(self, query: str) -> AsyncGenerator[Dict[str, Any], None]:
+        # Use astream_events to get token-level streaming
+        async for event in self.graph.astream_events(
+            {"messages": [("user", query)]}, version="v1"
+        ):
+            kind = event["event"]
+            if kind == "on_chat_model_stream":
+                content = event["data"]["chunk"].content
+                if content:
+                    # Yield each token as it arrives
+                    yield {"agent": {"messages": [{"content": content}]}}
 
-react_agent = ReActAgent()
+
+react_agent: "ReActAgent" = ReActAgent()

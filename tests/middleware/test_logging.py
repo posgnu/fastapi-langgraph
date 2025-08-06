@@ -1,17 +1,20 @@
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from src.fastapi_langraph.middleware.logging import logging_middleware
 from loguru import logger
+
+from fastapi_langraph.middleware.logging import logging_middleware
 
 app = FastAPI()
 app.middleware("http")(logging_middleware)
+
 
 @app.get("/")
 async def read_main():
     return {"msg": "Hello World"}
 
+
 client = TestClient(app)
+
 
 def test_logging_middleware():
     log_messages = []

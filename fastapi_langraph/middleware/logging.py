@@ -1,8 +1,13 @@
 import time
-from fastapi import Request
+from typing import Awaitable, Callable
+
+from fastapi import Request, Response
 from loguru import logger
 
-async def logging_middleware(request: Request, call_next):
+
+async def logging_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
